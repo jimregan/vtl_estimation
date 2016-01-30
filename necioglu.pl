@@ -30,6 +30,6 @@ while(<$f>) {
     my ($word, $vowel, @formants) = split / \& /;
     my $len = vtl(\@formants);
     print $comment;
-    print "$vowel & $len \\\\\n";
+    print "$vowel & " . sprintf("%.1f", $len) . " \\\\\n";
 }
 
