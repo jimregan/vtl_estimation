@@ -1,0 +1,1 @@
+All files were created in Praat, using 'Analyse spectrum' -> 'To LPC (burg)', where prediction order is the number in the filename, window length is 0.025, time step is 0.005, and pre-emphasis frequency is 50.0; 'To Formant' on the result, and 'Tabulate'->'List' for the final file.
