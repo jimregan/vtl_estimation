@@ -16,7 +16,7 @@ while(<$f>) {
         }
         # Manually fill in word and vowel after
         my @print = map { local $_ = $_ ; sprintf "%d", $_ } @out;
-        print " & " . join(" & & ", @print) . " \\\\\n";
+        print " & " . join(" & ", @print) . " \\\\\n";
         $num = 0;
         @acc = (0, 0, 0, 0, 0);
         $seen = 0;
