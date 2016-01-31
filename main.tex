@@ -1,0 +1,744 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\geometry{a4paper}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{url}
+\usepackage{tipa}
+\usepackage{hyperref}
+
+\usepackage{natbib}
+
+\linespread{1.5}
+
+\graphicspath{{Pictures/}}
+
+\begin{document}
+
+\begin{titlepage}
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+
+\center
+
+\begin{minipage}{0.8\textwidth}
+\begin{flushleft} \large
+Jim \textsc{O'Regan}
+\\
+{\large 15314318} \\[1.5cm]
+
+{ \large \bfseries Estimating vocal tract length from acoustic data using different spectral analysis techniques.}\\[1.5cm]
+
+M.Phil. in Speech and Language Processing
+\\
+%{\large \today}\\[3cm]
+{\large Speech Processing 1} \\
+{\large Michaelmas Term, 2015}
+\end{flushleft}
+\end{minipage}
+
+\begin{minipage}[t][10cm][b]{0.5\textwidth}
+\begin{flushleft} \large
+Wordcount: 2094
+\\
+\end{flushleft}
+\end{minipage}
+
+
+\vfill
+
+\end{titlepage}
+
+\section{Introduction}
+
+The aim of this assignment is to explore how to obtain estimates of vocal tract length (VTL) using spectral analysis techniques for measuring acoustic speech parameters, such as formant frequencies. The spectral analysis methods used are to be compared, to explore the potential variations in formant measurements and any effects this may have on the estimated VTL. The methods used to estimate VTL are also to be explored.
+
+The assignment consists of three tasks:
+
+\begin{enumerate}
+\item Record a set of vowels from a single speaker, or use a provided set of recordings.
+\item Analyse the vowel formants.
+\item Extract VTL from the acoustic analysis, exploring the methods used.
+\end{enumerate}
+
+VTL varies widely among speakers: between male and female, adult and child~\citep[p. 119]{rodriguez2010line}, and ``is an essential parameter to consider for explaining behavioral variability in speech production''~\citep[p. 1]{lammert2015short}. VTL additionally varies among vowels uttered by the same speaker as the overall length depends on ``the position of the larynx and the configuration of the lips''~\citep[p. 25]{johnson2003acoustic}; by implication, rounded vowels will have a greater overall length due to the protrusion of the lips.
+
+Acoustic to articulatory mapping is of theoretical interest because of the potential benefits of establishing a relationship between the configuration of the articulators and the resulting acoustic signal, and is an essential application to many tasks relating to speech and computing, such as articulatory speech synthesis, automatic speech recognition (ASR), and speech-driven facial animation~\citep{samer2010acoustic}. Of particular relevance to the current assignment is the correspondence between the lowering of F3 and the presence of lip rounding~\citep[p. 143]{maeda1990compensatory}. This correspondence could, in theory, be used to find the length of the vocal tract without lip protrusion; however, that is outside the scope of the current assignment due to the lack of sufficient data to learn a sufficiently accurate compensatory factor.
+
+One particular application of VTL estimation is in vocal tract length normalisation (VTLN). VTLN attempts to find a warping factor for speech input in order to transform it so that it more closely resembles an average vocal tract~\citep{saheer2010implementation}. This has particular application in ASR, as a means of reducing the mismatch between the set of speakers who wish to use the ASR system and the set of speakers on which it was trained~\citep[p. 121]{rodriguez2010line}. As \citet[p. 2]{lammert2015short} note, formant-based methods are particularly appealing for ASR, as the formants are already present in the speech signal, and the relationship between formants and VTL is known. However, \citet[p. 121]{rodriguez2010line} mention that the state of the art VTLN methods used in ASR do not (explicitly) take vocal tract length into account (albeit while proposing a method that is based on VTL); similarly, work on cross-language vowel normalisation by \citet{morrison2006cross} assumes that the mean VTLs over a large enough sample of speakers of both languages will be approximately equal.
+
+The remainder of this assignment is outlined as follows:
+section \ref{sect:meth} discusses the methodology used, including a description of the data (section \ref{sect:data}), an overview of the acoustic analysis techniques employed (section \ref{sect:tech}), and the methods used for calculating VTL (section \ref{sect:calc}); section \ref{sect:res} 
+
+
+\section{Methodology}
+\label{sect:meth}
+\subsection{Speech data}
+\label{sect:data}
+
+The analysis uses a set of provided recordings as its basis.
+The recordings are in mono, with a sampling frequency of 11025 Hz., are of an adult male speaker of the Dublin variant of Hiberno-English, and contain a set of vowels read in words that supply /hVd/ context, building on the wordlist initially used by \citet[p. 175]{peterson1952control} and extended in \citet[p. 38]{ladefoged2010course}, adding ``banana'' for schwa (using /bVn/ as a /CVC/ context). The recordings contain a single repetition of each word, and only monophthongs are selected for representation. 
+
+From the recordings, we selected the set of vowels suggested in the assignment notes: \textipa{/i/} (in the context \textit{heed}), \textipa{/a/} (\textit{had}), \textipa{/A/} (\textit{hod}), \textipa{/u/} (\textit{who'd}), and \textipa{/@/} (\textit{banana}).
+
+\subsection{Acoustic analysis techniques}
+\label{sect:tech}
+
+The following section will briefly describe the acoustic analysis: the tools used, methods for analysing formants, and the parameters selected for those methods.
+
+All acoustic analysis was performed using \textit{Praat}\footnote{\url{http://www.praat.org}}. Two methods for analysing formants were explored: Fast Fourier Transforms (FFT), and Linear Predictive Coding (LPC). Spectral analysis for both methods used Burg's method~\citep{burg1975maxent}.
+
+FFT is the default method for formant analysis in Praat, and is consequently the easier method to access. Following advice found online\footnote{\url{http://swphonetics.com/praat/snded/fftslices/}}, which indicated that Praat's FFT method is sensitive to fundamental frequency, but (by contrast with LPC) requires less manual tuning, we retained all defaults, which assume a male voice: Maximum formant (in Hertz): 5500.0; number of formants: 5; window length: 0.025; dynamic range (in dB): 30.0; dot size (mm): 1.0. We manually partitioned the data in three text grid layers: the first, for the word; the second, for the vowel; the third, for the stable region of the vowel, from which we took the mean for each of the first five formants. Each of the means of the formants was selected using Praat's menu options.
+
+LPC is slightly more difficult to access in Praat, and only available through ``LPC slices''. We extracted these across the whole sound file, and exported the measurements for each formant in each window as a matrix. To better match the formants obtained using the FFT method, we kept the default settings for all but prediction order, which was set to 10 (number of formants, multiplied by 2). The other, default, values were window length: 0.025 (matching the window length used for the FFT method); time step, 0.005; and pre-emphasis frequency, 50.0. From the matrix, we extracted the first 5 formants, as in the FFT method, filtered by the beginning and end times manually selected for the stable regions of the vowels. 
+
+% http://cds.cern.ch/record/296781/files/0471594318_TOC.pdf
+
+\subsection{Methods for calculating the VTL}
+\label{sect:calc}
+
+%formula 1
+\citet[p. 267]{paige1970calculation} present equation \ref{johnson2003acoustic1}, which gives the formants of a uniform tube closed at one end, and open at the other\footnote{Referred to as the ``source-filter theory party trick'' by \citet[p. 103]{johnson2003acoustic}.}. $c$ refers to the speed of sound, using the value of 350 m/s~\citep[p. 114]{ladefoged1996elements}\footnote{As the speed of sound in air varies with temperature, the relationship between 350 m/s~\citep[p. 114]{ladefoged1996elements} and the tube length of 17.5 selected to represent a typical vocal tract of a male speaker~\citep[p. 119]{ladefoged1996elements} is presumably not coincidental.}; $F_n$ refers to the formant, where $n$ is the number of that formant; $L$ is the length of the tube.
+
+
+\begin{equation}
+\label{johnson2003acoustic1}
+F_n = (2n - 1)\frac{c}{4l}, n = 1, 2, 3, \cdots
+\end{equation}
+
+As a baseline for our measurements, we use the version of that equation provided in the assignment notes, rewritten for calculating $L$ as a function of $F_n$:
+
+\begin{equation}
+\label{johnson2003acoustic2}
+L = c(2n - 1)/(4F_n)
+\end{equation}
+
+\citet{rodriguez2010line} present equation \ref{necioglu2000unsupervised1}, attributed to \citet{necioglu2000unsupervised}, which we use for comparison, where $v$ is the speed of sound, and $F_1$ is defined in equation \ref{necioglu2000unsupervised2}, where $M$ is the number of formants, and $\tilde{F_k}$ is the measured formant, for each formant in $(1, 2, \ldots M)$.
+
+\begin{equation}
+\label{necioglu2000unsupervised1}
+VTL = \frac{v}{4F_1}
+\end{equation}
+
+\begin{equation}
+\label{necioglu2000unsupervised2}
+F_1 = \left( \frac{1}{M} \sum_{k}{\left( \frac{\tilde{F}_k}{2k - 1} \right)^2} \right)^{\frac{1}{2}}
+\end{equation}
+
+\citet{rodriguez2010line} present a method for VTL re-estimation, suitable for online use, which is therefore more applicable to online uses, such as in ASR, than the other methods presented here. In particular, the assignment notes mention that the baseline method is only suitable for use with schwa, although it suggests taking the mean of the formants of the other vowels as a method of adapting it. Even with this adaptation, the task becomes a search for a vowel, which would entail a level of buffering of the speech input until one is found, which would slow the speech recognition process (although less than a search for schwa would). The promise of a method that can operate in an online fashion, then, is an attractive one; the method proposed depends only on the current and preceding frame, greatly reducing the amount of speech input required to function, thereby increasing its speed of operation.
+
+Equation \ref{rodriguez2010line1} updates the VTL for frame $i$ of speaker \textit{spk}, using memory factor $\beta = 0.99$. In the case of the initial frame, the VTL for the current speaker is set to the VTL of the model, as in equation \ref{rodriguez2010line2}; equation \ref{rodriguez2010line3} updates the warping factor $\alpha$, relating the VTL of the current speaker to that of the model in terms of warping factor $\lambda = 0.5$, used to moderate the amount of warping applied.
+
+Lacking a pre-trained model, we will set the VTL model to 17.5, based on the average VTL given in \citet[p. 119]{ladefoged1996elements}.
+
+\begin{equation}
+\label{rodriguez2010line1}
+VTL_{spk}(i) = \beta * VTL_{spk}(i - 1) + (1 - \beta) * VTL(i)
+\end{equation}
+
+% overline, here = mean of a series of values
+\begin{equation}
+\label{rodriguez2010line2}
+VTL_{spk}(0) = \overline{VTL}_{model}
+\end{equation}
+
+\begin{equation}
+\label{rodriguez2010line3}
+\alpha(i) = 1 + \lambda\frac{\overline{VTL}_{model} - VTL_{spk}(i)}{\overline{VTL}_{model}}
+\end{equation}
+
+\section{Results and discussion}
+\label{sect:res}
+
+\subsection{Vowel formant frequencies}
+\label{sect:vff}
+Table \ref{tbl:praatfft} contains the formants obtained using Praat's FFT method; table \ref{tbl:praatlpc} contains the mean formants from Praat's LPC method.
+
+As mentioned in section \ref{sect:tech}, we used a formant number of 10 with Praat's LPC method; although in hindsight it seems obvious to restrict the formant number to the number of formants we are interested in, we did not arrive at this conclusion easily. 
+
+Following advice in online forums, we initially attempted to use 24 (see table \ref{tbl:praatlpc24}), based on the sampling frequency of the recordings (11025 Hz), plus one. This lead to formant numbers that were up to half the size of the equivalents obtained using the FFT method, and resulted in a doubling of the VTL in several cases. Other values attempted included 12, still following the advice to add one (see table \ref{tbl:praatlpc12}) and 16 (Praat's default -- see table \ref{tbl:praatlpc16}), before finally settling on 10, which finally gave more realistic looking results.
+
+\begin{table}
+\begin{center}
+\caption{Words and their vowels, with formants extracted using Praat's FFT method.}
+\label{tbl:praatfft}
+\begin{tabular}{|l|c|lllll|}
+\hline
+Word & Vowel & F1 & F2 & F3 & F4 & F5 \\
+\hline
+\hline
+heed & \textipa{/i/} & 275 & 2177 & 2886 & 3517 & 4543 \\
+%hid & \textipa{/I/} & 449 & 1940 & 2606 & 3452 & 3955 \\
+%head & \textipa{/E/} & 592 & 1801 & 2604 & 3339 & 4195 \\
+had & \textipa{/a/} & 786 & 1455 & 2678 & 3377 & 4168 \\
+hod & \textipa{/A/} & 684 & 1145 & 2649 & 3447 & 4072 \\
+%hawed & \textipa{/O/} & 646 & 1094 & 2642 & 3322 & 3982 \\
+%Hudd & \textipa{/2/ [U]} & 491 & 1066 & 2512 & 3202 & 4046 \\
+%hoed & \textipa{/OU/ [o]} & 584 & 1055 & 2550 & 3295 & 4010 \\
+%hood & \textipa{/U/} & 460 & 1062 & 2546 & 3196 & 4074 \\
+who'd & \textipa{/u/} & 349 & 1528 & 2317 & 3270 & 3730 \\
+banana & \textipa{/@/} & 528 & 1399 & 2646 & 3350 & 4002 \\
+%hide & \textipa{/aI/} & 670 & 1271 & 2628 & 3314 & 4075 \\
+%Hoyd & \textipa{/OI/} & 561 & 1072 & 2491 & 3171 & 4057 \\
+%how'd & \textipa{/E/} & 749 & 1009 & 2629 & 3375 & 4038\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{Words and their vowels, with mean formants extracted using Praat's LPC method.}
+\label{tbl:praatlpc}
+\begin{tabular}{|l|c|lllll|}
+\hline
+Word & Vowel & F1 & F2 & F3 & F4 & F5 \\
+\hline
+\hline
+heed & \textipa{/i/} & 274 & 2178 & 2883 & 3528 & 4666 \\
+had & \textipa{/a/} & 786 & 1454 & 2677 & 3380 & 4168 \\
+hod & \textipa{/A/} & 686 & 1141 & 2649 & 3451 & 4074 \\
+who'd & \textipa{/u/} & 349 & 1532 & 2315 & 3260 & 3728 \\
+banana & \textipa{/@/}  & 328 & 1598 & 2662 & 3398 & 4076 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{Words and their vowels, with mean formants extracted using Praat's LPC method, using 12 formants.}
+\label{tbl:praatlpc12}
+\begin{tabular}{|l|c|lllll|}
+\hline
+Word & Vowel & F1 & F2 & F3 & F4 & F5 \\
+\hline
+\hline
+heed & \textipa{/i/}  & 273 & 2133 & 2810 & 3149 & 3662 \\
+had & \textipa{/a/}  & 737 & 1386 & 2602 & 2821 & 3789 \\
+hod & \textipa{/A/}  & 621 & 1132 & 2590 & 3086 & 3671 \\
+who'd & \textipa{/u/}  & 344 & 1409 & 2181 & 3066 & 3516 \\
+banana & \textipa{/@/}  & 316 & 1238 & 2562 & 2917 & 3570 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{Words and their vowels, with mean formants extracted using Praat's LPC method, using 16 formants (Praat's default).}
+\label{tbl:praatlpc16}
+\begin{tabular}{|l|c|lllll|}
+\hline
+Word & Vowel & F1 & F2 & F3 & F4 & F5 \\
+\hline
+\hline
+heed & \textipa{/i/}  & 279 & 2080 & 2274 & 2780 & 3165 \\
+had & \textipa{/a/}  & 723 & 1132 & 1821 & 2577 & 2836 \\
+hod & \textipa{/A/}  & 629 & 1086 & 2368 & 2732 & 3302 \\
+who'd & \textipa{/u/}  & 357 & 1408 & 2152 & 2908 & 3272 \\
+banana & \textipa{/@/}  & 340 & 1243 & 2481 & 2768 & 3259 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{Words and their vowels, with mean formants extracted using Praat's LPC method, using 24 formants.}
+\label{tbl:praatlpc24}
+\begin{tabular}{|l|c|lllll|}
+\hline
+Word & Vowel & F1 & F2 & F3 & F4 & F5 \\
+\hline
+\hline
+heed & \textipa{/i/}  & 256 & 481 & 1370 & 2042 & 2174 \\
+had & \textipa{/a/}  & 399 & 812 & 1374 & 1526 & 2171 \\
+hod & \textipa{/A/}  & 525 & 669 & 1136 & 1704 & 2416 \\
+who'd & \textipa{/u/}  & 330 & 440 & 1382 & 1432 & 2136 \\
+banana & \textipa{/@/}  & 247 & 508 & 1227 & 1728 & 2293 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{VTL estimates}
+\label{sect:vtlest}
+
+Table \ref{tbl:fftbaseline} contains the baseline VTL estimates based on formants obtained using Praat's FFT method, table \ref{tbl:lpcbaseline} contains the baseline VTL estimates based on Praat's LPC method, and \ref{tbl:neciog} contains VTL estimates for both FFT and LPC using the method attributed to~\citet{necioglu2000unsupervised}. For this method, we include lengths obtained when formant number was set to 12, as well as when set to 10, to illustrate the difference in lengths obtained.
+
+The assignment notes, when discussing the baseline method, mentions that it is only suitable for schwa, noting that the VTL estimate will vary considerably when derived from different formants for different vowels. We followed the suggestion of using the mean of the formant values; however, we experimented with a number of means, finding that taking the means of F3, F4, and F5 best fit our expectations of how the lengths would appear. \citet{wakita1977normalization} suggests using only the higher formants, as they are less sensitive to speech articulation, which our results confirm.
+
+As is, we notice considerable difference even with schwa, which may be due to the realisation in the recording. As the task was to use vowels in /CVC/ context, we selected the first schwa, which is greatly reduced (only three pulses are visible in the spectrograph), and almost imperceptible (the realisation in the recording sounds more like \textipa{[b'\s{n}A:.n@]} than the expected \textipa{/b@'nA:.n@/}). We can possibly attribute the lengthening of the schwa to the co-articulatory effect of the preceding \textipa{/b/}, which, as a bilabial, could involve a protrusion of the lips and thus a lengthening of the vocal tract.
+
+However, when using the formants for the second schwa (682, 1461, 2803, 3345, and 4307, for formants F1 to F5, using Praat's FFT method), we see still see the same kind of variation in the lengths obtained per formant using the baseline method (12.8, 18.0, 15.6, 18.3, 18.3, for formants F1 to F5). This, again, could be due to co-articulatory factors, as the nasal \textipa{/n/} precedes it; the escape of air through the nasal cavity could be increasing the size of the tube in a manner that appears like an increase in length.
+
+The re-estimations of VTL for both FFT and LPC, as provided in table \ref{tbl:neciog} are provided in table \ref{tbl:fftreest} for FFT, and \ref{tbl:lpcreest} for LPC. Using this method, none of the VTL estimates were sufficiently divergent to change the estimation from the model value (17.5cm). However, as the method is intended for online use, we ran it over the raw frames of the LPC data extracted from Praat, first for all frames, then omitting frames which had an undefined formant value. In the case of all frames -- which includes silence as well as vowels and consonants -- we received a final VTL re-estimation of 13.1 for the final frame; when undefined formant values were omitted, the final value was 16.6.
+
+\begin{table}
+\begin{center}
+\caption{Baseline VTL for Praat with FFT}
+\label{tbl:fftbaseline}
+\begin{tabular}{|l|lllll|l|llll|}
+\hline
+Vowel & F1 & F2 & F3 & F4 & F5 & F1-F5 & F3/F4 & F2-F4 & F3-F5 & F4/F5 \\
+\hline
+\textipa{/i/} & 31.8 & 12.1 & 15.2 & 17.4 & 17.3 & 18.8 & 16.3 & 14.9 & 16.6 & 17.4 \\
+%\textipa{/I/} & 19.5 & 13.5 & 16.8 & 17.7 & 19.9 & 17.5 & 17.3 & 16.0 & 18.1 & 18.8 \\
+%\textipa{/E/} & 14.8 & 14.6 & 16.8 & 18.3 & 18.8 & 16.7 & 17.6 & 16.6 & 18.0 & 18.6 \\
+\textipa{/a/} & 11.1 & 18.0 & 16.3 & 18.1 & 18.9 & 16.5 & 17.2 & 17.5 & 17.8 & 18.5 \\
+\textipa{/A/} & 12.8 & 22.9 & 16.5 & 17.8 & 19.3 & 17.9 & 17.1 & 19.1 & 17.9 & 18.6 \\
+%\textipa{/O/} & 13.5 & 24.0 & 16.6 & 18.4 & 19.8 & 18.5 & 17.5 & 19.7 & 18.3 & 19.1 \\
+%\textipa{/2/ [U]} & 17.8 & 24.6 & 17.4 & 19.1 & 19.5 & 19.7 & 18.3 & 20.4 & 18.7 & 19.3 \\
+%\textipa{/OU/ [o]} & 15.0 & 24.9 & 17.2 & 18.6 & 19.6 & 19.0 & 17.9 & 20.2 & 18.5 & 19.1 \\
+%\textipa{/U/} & 19.0 & 24.7 & 17.2 & 19.2 & 19.3 & 19.9 & 18.2 & 20.4 & 18.6 & 19.2 \\
+\textipa{/u/} & 25.1 & 17.2 & 18.9 & 18.7 & 21.1 & 20.2 & 18.8 & 18.3 & 19.6 & 19.9 \\
+\textipa{/@/} & 16.6 & 18.8 & 16.5 & 18.3 & 19.7 & 18.0 & 17.4 & 17.9 & 18.2 & 19.0 \\
+%\textipa{/aI/} & 13.1 & 20.7 & 16.6 & 18.5 & 19.3 & 17.6 & 17.6 & 18.6 & 18.2 & 18.9 \\
+%\textipa{/OI/} & 15.6 & 24.5 & 17.6 & 19.3 & 19.4 & 19.3 & 18.4 & 20.5 & 18.8 & 19.4 \\
+%\textipa{/E/} & 11.7 & 26.0 & 16.6 & 18.1 & 19.5 & 18.4 & 17.4 & 20.3 & 18.1 & 18.8 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{Baseline VTL for Praat with LPC}
+\label{tbl:lpcbaseline}
+\begin{tabular}{|l|lllll|l|llll|}
+\hline
+Vowel & F1 & F2 & F3 & F4 & F5 & F1-F5 & F3/F4 & F2-F4 & F3-F5 & F4/F5 \\
+\hline
+\textipa{/i/}  & 31.9 & 12.1 & 15.2 & 17.4 & 16.9 & 18.7 & 16.3 & 14.9 & 16.5 & 17.1 \\
+\textipa{/a/}  & 11.1 & 18.1 & 16.3 & 18.1 & 18.9 & 16.5 & 17.2 & 17.5 & 17.8 & 18.5 \\
+\textipa{/A/}  & 12.8 & 23.0 & 16.5 & 17.7 & 19.3 & 17.9 & 17.1 & 19.1 & 17.9 & 18.5 \\
+\textipa{/u/}  & 25.1 & 17.1 & 18.9 & 18.8 & 21.1 & 20.2 & 18.8 & 18.3 & 19.6 & 20.0 \\
+\textipa{/@/}  & 26.7 & 16.4 & 16.4 & 18.0 & 19.3 & 19.4 & 17.2 & 17.0 & 17.9 & 18.7 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{VTL estimates obtained using the method attributed to \citet{necioglu2000unsupervised}.}
+\label{tbl:neciog}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Vowel & VTL (FFT) & VTL (LPC, 12) & VTL (LPC, 10) \\
+\hline
+\hline
+\textipa{/i/} & 16.3  & 17.4 & 16.2 \\
+%\textipa{/I/} & 17.0 \\
+%\textipa{/E/} & 16.4 \\
+\textipa{/a/} & 15.5 & 16.7 & 15.5 \\
+\textipa{/A/} & 16.9 & 18.2 & 16.9\\
+%\textipa{/O/} & 17.5 \\
+%\textipa{/2/ [U]} & 19.3 \\
+%\textipa{/OU/ [o]} & 18.3 \\
+%\textipa{/U/} & 19.5 \\
+\textipa{/u/} & 19.7 & 20.9 & 19.7 \\
+\textipa{/@/} & 20.5 & 21.1 & 18.5 \\
+%\textipa{/aI/} & 16.9 \\
+%\textipa{/OI/} & 18.7 \\
+%\textipa{/E/} & 16.6 \\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{VTL re-estimates of FFT-based estimates.}
+\label{tbl:fftreest}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Vowel & VTL (original) & VTL re-estimate & Warp factor \\
+\hline
+\hline
+\textipa{/i/} & 16.3  & 17.488 & 1.00034285714286 \\
+\textipa{/a/} & 15.5 & 17.46812 & 1.00091085714286 \\
+\textipa{/A/} & 16.9 & 17.4624388 & 1.00107317714286 \\
+\textipa{/u/} & 19.7 & 17.484814412 & 1.00043387394286 \\
+\textipa{/@/} & 20.5 & 17.51496626788 & 0.999572392346286 \\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\begin{table}
+\begin{center}
+\caption{VTL re-estimates of LPC-based estimates.}
+\label{tbl:lpcreest}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Vowel & VTL (original) & VTL re-estimate & Warp factor \\
+\hline
+\hline
+\textipa{/i/} & 16.2  & 17.487 & 1.00037142857143 \\
+\textipa{/a/} & 15.5 & 17.46713 & 1.00093914285714 \\
+\textipa{/A/} & 16.9 & 17.4614587 & 1.00110118 \\
+\textipa{/u/} & 19.7 & 17.483844113 & 1.00046159677143 \\
+\textipa{/@/} & 18.5 & 17.49400567187 & 1.000171266518 \\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\subsection{Impact of formant estimates on VTL estimates}
+\label{sect:impact}
+
+The use of different methods of obtaining the formants, FFT and LPC, did not have as significant an impact as might have been imagined. Far more significant differences are in evidence among the results of the LPC method when selecting different formant numbers.
+
+This reinforces the online advice, mentioned in section \ref{sect:tech}, that Praat's FFT method requires less manual tuning than the LPC method. However, the only evidence that the fundamental frequency may have an impact is visible in the formants for schwa, which show more differences than those of the other vowels. Unusually, F1 of schwa using the FFT method is closer to the figure of approximately 500 that we would expect to see in schwa.
+
+\subsection{Different estimates of VTL}
+\label{sect:diff}
+
+The different methods of obtaining VTL estimates show more variation than the methods for obtaining formants. The method attributed to \citet{necioglu2000unsupervised} seems to provide results that are more in line with our expectations than does the baseline method, when taken individually, or as a mean of all formants.
+
+When taking the mean of formants F3, F4, and F5, on the other hand, the baseline method shows little difference for either \textipa{/i/} or \textipa{/u/}; the size of the VTL for schwa using this method is significantly higher than that of LPC, which is itself unusually high (although, as noted, this may be because of shortness of the utterance, combined with the co-articulatory influence of \textipa{/b/}.
+
+When run on the VTL estimates that were taken from vowels only, the method described by \citet{rodriguez2010line} shows great promise; however, when run on the raw frames, there is a reduction in VTL (though the difference from the expectation is less than in some cases found using the other methods alone). However, the tests were performed with an artificial vocal tract length in lieu of a real model, so there is perhaps more to be investigated here. Testing with other data, from different kinds of speakers, including women and children, may show better results. There was a marked improvement when frames that were lacking a formant were omitted, so we expect we would see a similar improvement if there were a similar test added, to see if the formants in the frame were indicative of a vowel or not. Although this is, in a sense, a return to the search for a vowel that the other two methods require, as only a single frame of the vowel is required, this would not be such a slowdown as with those methods, and could possibly be handled using a binary classifier. Testing that would require more data than is available, however, and is outside the scope of the current assignment.
+
+
+\section{Conclusions}
+
+In this assignment, we performed spectral analysis on a set of provided recordings of a male speaker, using two methods: FFT and LPC. We extracted VTL estimates using the formants extracted using two methods, as well as a re-estimation of the VTL estimates using a third.
+
+For future work, we would perhaps investigate the online VTL estimation methods described by \citet{lammert2015short}. As it requires training data, it was not suitable for inclusion in the current assignment; additionally, it is tuned against known vocal tract lengths, which were extracted semi-automatically from x-ray scans, which were not available to us.
+
+The online VTL re-estimation method of \citet{rodriguez2010line} showed considerable promise when used to re-estimate the VTL estimates acquired using the other methods; when used online on raw frames, using the VTL estimation method attributed to \citet{necioglu2000unsupervised}, it showed some deviation from expected results, but this is perhaps to be expected, as the data it was operating on was not limited to vowel formants.
+
+\bibliographystyle{plainnat}
+\bibliography{spone.bib}
+
+\section{Appendices}
+
+\begin{figure*}
+\caption{Perl script to perform baseline calculation}
+\label{app:baseline}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings;
+use strict;
+sub flength {
+    my $n = $_[0]; my $fn = $_[1]; my $c = 35000;
+    my $res = $c * ((2 * $n) - 1) / (4 * $fn);
+    $res;
+}
+my $f;
+if (!$ARGV[0] || $ARGV[0] eq '') {
+    $f = *STDIN;
+} else {
+    open ($f, "<$ARGV[0]");
+}
+while(<$f>) {
+    chomp; s/\\\\//;
+    next if (/^%/); # Skip comments
+    my $comment = ''; # if not skipping, put it back
+    $comment = '%' if (/^%/);
+    my ($word, $vowel, @formants) = split / \& /;
+    my @lns = (); my $acc = 0;
+    for (my $i = 0; $i < 5; $i++) {
+        my $ln = flength ($i+1, $formants[$i]);
+        push @lns, $ln;
+        $acc += $ln;
+    }
+    my $mean = sprintf ("%.1f", $acc / 5);
+    my $h45mean = sprintf ("%.1f", ($lns[3] + $lns[4]) / 2);
+    my $h345mean = sprintf ("%.1f", ($lns[2] + $lns[3] + $lns[4]) / 3);
+    my $h34mean = sprintf ("%.1f", ($lns[2] + $lns[3]) / 2);
+    my $h234mean = sprintf ("%.1f", ($lns[1] + $lns[2] + $lns[3]) / 3);
+    my @plns = map { local $_ = $_ ; sprintf "%.1f", $_ } @lns;
+    print $comment;
+    print "$vowel & " . join(" & ", @plns) . " & $mean";
+    print " & $h34mean & $h234mean & $h345mean & $h45mean \\\\\n";
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+\begin{figure*}
+\caption{Perl script to filter LPC frames}
+\label{app:framefilt}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings; use strict;
+# Times are hardcoded
+my @beg = qw(0.4581200950698864 3.055065014920004 3.897152825776543 
+             8.025616713925247 8.715284865072784);
+my @end = qw(0.489452904932498 3.1012328756786514 3.9496205026691236 
+             8.06078298961716 8.73416588192373);
+my $f;
+if (!$ARGV[0] || $ARGV[0] eq '') {
+    $f = *STDIN;
+} else {
+    open ($f, "<$ARGV[0]");
+}
+my $lbeg = $beg[0];
+while(<$f>) {
+    chomp; s/\\\\//;
+    my ($frame, $time, @formants) = split / \& /;
+    my $skip = 1;
+    for (my $i = 0; $i < 5; $i++) {
+        $skip = 0 if ($time > $beg[$i] && $time < $end[$i]);
+        if ($skip == 0) {
+            if ($lbeg != $beg[$i]) {
+                print "\\hline\n";
+                $lbeg = $beg[$i];
+            }
+            print "$_\\\\\n";
+            $skip = 1;
+            next;
+        }
+    }
+}
+print "\\hline\n\n";
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+\begin{figure*}
+\caption{Perl script to calculate mean from LPC frames}
+\label{app:framemean}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings; use strict;
+my $f;
+if (!$ARGV[0] || $ARGV[0] eq '') {
+    $f = *STDIN;
+} else {
+    open ($f, "<$ARGV[0]");
+}
+my $seen = 0; my @acc = (0, 0, 0, 0, 0); my $num = 0;
+while(<$f>) {
+    chomp; s/\\\\//;
+    if ($seen == 1) {
+        my @out = ();
+        for (my $i = 0; $i < 5; $i++) {
+            push @out, ($acc[$i] / $num);
+        }
+        # Manually fill in word and vowel after
+        my @print = map { local $_ = $_ ; sprintf "%d", $_ } @out;
+        print " & " . join(" & ", @print) . " \\\\\n";
+        $num = 0;
+        @acc = (0, 0, 0, 0, 0);
+        $seen = 0;
+    }
+    exit if (/^$/);
+    if (/\\hline/) {
+        $seen = 1;
+        next;
+    }
+    $num++;
+    my ($frame, $time, @formants) = split / \& /;
+    for (my $i = 0; $i < 5; $i++) {
+        $acc[$i] += $formants[$i];
+    }
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+\begin{figure*}
+\caption{Perl filter script to convert Praat's Tabulate-$>$List output as LaTeX table.}
+\label{app:tabletotex}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings; use strict;
+while(<>) {
+    chomp;
+    next if (/^frame/); #skip header
+    my ($frame, $time, $nform, @rformants) = split/\t/;
+    my @sform = ();
+    push @sform, ($rformants[0] ne '--undefined--') ? $rformants[0] : 0;
+    push @sform, ($rformants[2] ne '--undefined--') ? $rformants[2] : 0;
+    push @sform, ($rformants[4] ne '--undefined--') ? $rformants[4] : 0;
+    push @sform, ($rformants[6] ne '--undefined--') ? $rformants[6] : 0;
+    push @sform, ($rformants[8] ne '--undefined--') ? $rformants[8] : 0;
+    my @oform = map { local $_ = $_ ; sprintf "%d", $_ } @sform;
+    print "$frame & $time & " . join (" & ", @oform) . " \\\\\n";
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+\begin{figure*}
+\caption{Perl script to perform VTL using the method attributed to~\citet{necioglu2000unsupervised}.}
+\label{app:neciog}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings;
+use strict;
+sub vtl {
+    my $f_one = fone($_[0]);
+    my $v = 35000;
+    return ($v / (4 * $f_one));
+}
+sub fone {
+    my $fk = $_[0];
+    my $M = $#$fk + 1;
+    my $acc = 0;
+    for (my $i = 1; $i < $M+1; $i++) {
+        my $part = ($$fk[$i-1] / ((2 * $i) -1));
+        $acc += $part * $part;
+    }
+    return sqrt ($acc / $M);
+}
+my $f;
+if (!$ARGV[0] || $ARGV[0] eq '') {
+    $f = *STDIN;
+} else {
+    open ($f, "<$ARGV[0]");
+}
+while(<$f>) {
+    chomp; s/\\\\//;
+    next if (/^%/); # Skip comments
+    my $comment = ''; # if not skipping, put it back
+    $comment = '%' if (/^%/);
+    my ($word, $vowel, @formants) = split / \& /;
+    my $len = vtl(\@formants);
+    print $comment;
+    print "$vowel & " . sprintf("%.1f", $len) . " \\\\\n";
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+In the interest of having results that might be reproduced, and in transparency in the manner of calculations, the following are the scripts used to perform the calculations, as well as the scripts used in preparing the data. All scripts are available online, via Github\footnote{\url{https://github.com/jimregan/vtl_estimation}}; the repository also contains the matrices exported from Praat for the LPC method, and the table of formants collected using the FFT method, which served as input to the calculation scripts.
+
+The calculation scripts are shown in figures \ref{app:baseline} and \ref{app:neciog}; figure \ref{app:tabletotex} was used to convert the data exported from Praat using the LPC method, figure \ref{app:framefilt} filtered the result of figure \ref{app:tabletotex} to obtain only the frames that corresponded to the times selected for the stable regions of the vowels (to correspond with the FFT formants); and figure \ref{app:framemean} contains the script that calculated the mean of the formant values from figure \ref{app:framefilt}.
+
+Figure \ref{app:rodriguez} contains the script that performs the VTL re-estimation, for VTL measured on vowels using the other scripts. Because the method is intended for online use, a second version is provided in figures \ref{app:rodriguezonline} and \ref{app:rodriguezonline2} which reads directly from the data exported by Praat, and performs both VTL and the re-estimation.
+
+\begin{figure*}
+\caption{Perl script to perform VTL re-estimation using the method in \citet{rodriguez2010line}.}
+\label{app:rodriguez}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings;
+use strict;
+my $f;
+my $model = 17.5; # default average
+if ($ARGV[0] && $ARGV[0] ne '') {
+    $model = $ARGV[0];
+}
+if (!$ARGV[1] || $ARGV[1] eq '') {
+    $f = *STDIN;
+} else {
+    open ($f, "<$ARGV[0]");
+}
+my $lambda = 0.5;
+my $beta = 0.99;
+sub vtl_spk_i {
+    my $vtl_i = $_[0];
+    my $vtl_prev = $_[1];
+    return (($beta * $vtl_prev) + ((1 - $beta) * $vtl_i));
+}
+sub alpha_i {
+    my $vtlspki = $_[0];
+    return (1 + ($lambda * (($model - $vtlspki) / $model)));
+}
+my $prev = $model;
+while (<$f>) {
+    chomp; s/\\\\//;
+    my ($vowel, $vtl) = split / & /;
+    my $update = vtl_spk_i($vtl, $prev);
+    $prev = $update;
+    my $warp = alpha_i($update);
+    print "$vowel & $vtl & $update & $warp \\\\\n";
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+\begin{figure*}
+\caption{Online version of the perl script to perform VTL re-estimation using the method in \citet{rodriguez2010line}.}
+\label{app:rodriguezonline}
+\begin{small}
+\begin{verbatim}
+#!/usr/bin/perl
+use warnings;
+use strict;
+my $f;
+my $model = 17.5; # default average
+if ($ARGV[0] && $ARGV[0] ne '') {
+    $model = $ARGV[0];
+}
+if (!$ARGV[1] || $ARGV[1] eq '') {
+    $f = *STDIN;
+} else {
+    open ($f, "<$ARGV[0]");
+}
+my $lambda = 0.5;
+my $beta = 0.99;
+sub vtl_spk_i {
+    my $vtl_i = $_[0];
+    my $vtl_prev = $_[1];
+    return (($beta * $vtl_prev) + ((1 - $beta) * $vtl_i));
+}
+sub alpha_i {
+    my $vtlspki = $_[0];
+    return (1 + ($lambda * (($model - $vtlspki) / $model)));
+}
+sub vtl {
+    my $f_one = fone($_[0]);
+    my $v = 35000;
+    return ($v / (4 * $f_one));
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+\begin{figure*}
+\caption{Online version of the perl script to perform VTL re-estimation, continued.}
+\label{app:rodriguezonline2}
+\begin{small}
+\begin{verbatim}
+sub fone {
+    my $fk = $_[0];
+    my $M = $#$fk + 1;
+    my $acc = 0;
+    for (my $i = 1; $i < $M+1; $i++) {
+        if ($$fk[$i-1] == 0) {
+            $M--;
+        } else {
+            my $part = ($$fk[$i-1] / ((2 * $i) -1));
+            $acc += $part * $part;
+        }
+    }
+    return sqrt ($acc / $M);
+}
+my $prev = $model;
+while (<$f>) {
+    chomp;
+    next if (/^frame/); #skip header
+    my ($frame, $time, $nform, @rformants) = split/\t/;
+    my @sform = ();
+    next if (/--undefined--/);
+    my $vtl = vtl(\@sform);
+    my $update = vtl_spk_i($vtl, $prev);
+    my $warp = alpha_i($update);
+    print "$frame & $prev & $update & $warp \\\\\n";
+    $prev = $update;
+}
+\end{verbatim}
+\end{small}
+\end{figure*}
+
+
+\end{document}
