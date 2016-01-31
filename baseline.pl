@@ -2,6 +2,9 @@
 use warnings;
 use strict;
 
+# F_n = (2n - 1)\frac{c}{4l}, n = 1, 2, 3, \cdots
+# rewritten for L as a function of F_n
+# L = c(2n - 1)/(4F_n)
 sub flength {
     my $n = $_[0];
     my $fn = $_[1];
